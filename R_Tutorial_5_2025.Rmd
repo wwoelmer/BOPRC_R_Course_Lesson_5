@@ -105,6 +105,14 @@ ggplot(wq_okaro, aes(x = as.POSIXct(Time), y = Value, color = Parameter)) +
   facet_wrap(~Parameter, scales = 'free') +
   theme_bw() +
   xlab('Time')
+
+ggplot(wq_okaro, aes(x = Value, color = Parameter)) +
+  geom_histogram() +
+  facet_wrap(~Parameter, scales = 'free') +
+  theme_bw() +
+  xlab('Time')
+
+
 ```
 
 Alright, we have a time series of four variables. There are many things we can do to analyse this data. Let's start with a correlation analysis.
@@ -178,11 +186,11 @@ okaro_corr <- as.matrix(okaro_corr)
 
 ```
 
-Now let's run the correlation analysis using the `rcorr` function.
+Now let's run the correlation analysis using the `rcorr` function. The default type of analysis is Pearson, which assumes normality. Here, we will specify Spearman because our data are not all normally distributed
 
 ```{r message=FALSE,tidy=TRUE}
 
-okaro_corr <- rcorr(okaro_corr) # default is pearson
+okaro_corr <- rcorr(okaro_corr, type = 'spearman') 
 print(okaro_corr)
 ```
 Let's look at that output! The first table is the correlation coefficients (r) and the second is the p-values. 
@@ -227,7 +235,7 @@ tara_corr <- tara_corr %>%
  select(-Date)
 
 tara_corr <- na.omit(tara_corr)
-tara_corr <- rcorr(as.matrix(tara_corr))
+tara_corr <- rcorr(as.matrix(tara_corr), type = 'spearman')
 
 p_mat <- tara_corr$P # this is the matrix of p_values
 diag(p_mat) <- 1 # because there are no p-values on the diagonals, we have to insert 1 here for the plot to 
