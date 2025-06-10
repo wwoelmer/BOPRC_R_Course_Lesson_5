@@ -1,0 +1,13 @@
+﻿variable,band,metric,y_min,y_max
+chla_mgm3,a,median,0,2
+chla_mgm3,b,median,2,5
+chla_mgm3,c,median,5,12
+chla_mgm3,d,median,12,357
+TN_mgm3,a,median,0,160
+TN_mgm3,b,median,160,350
+TN_mgm3,c,median,350,750
+TN_mgm3,d,median,750,6100
+TP_mgm3,a,median,0,10
+TP_mgm3,b,median,10,20
+TP_mgm3,c,median,20,50
+TP_mgm3,d,median,50,396
