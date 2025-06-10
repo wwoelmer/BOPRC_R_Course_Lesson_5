@@ -106,11 +106,10 @@ ggplot(wq_okaro, aes(x = as.POSIXct(Time), y = Value, color = Parameter)) +
   theme_bw() +
   xlab('Time')
 
-ggplot(wq_okaro, aes(x = Value, color = Parameter)) +
+ggplot(wq_okaro, aes(x = Value, fill = Parameter)) +
   geom_histogram() +
   facet_wrap(~Parameter, scales = 'free') +
-  theme_bw() +
-  xlab('Time')
+  theme_bw()
 
 
 ```
@@ -190,17 +189,17 @@ Now let's run the correlation analysis using the `rcorr` function. The default t
 
 ```{r message=FALSE,tidy=TRUE}
 
-okaro_corr <- rcorr(okaro_corr, type = 'spearman') 
-print(okaro_corr)
+okaro_corr_out <- rcorr(okaro_corr, type = 'spearman') 
+print(okaro_corr_out)
 ```
 Let's look at that output! The first table is the correlation coefficients (r) and the second is the p-values. 
 
 
 ```{r message=FALSE,tidy=TRUE}
 
-p_mat <- okaro_corr$P # this is the matrix of p_values
+p_mat <- okaro_corr_out$P # this is the matrix of p_values
 diag(p_mat) <- 1 # because there are no p-values on the diagonals, we have to insert 1 here for the plot to work
-corrplot(okaro_corr$r, type = 'upper',
+corrplot(okaro_corr_out$r, type = 'upper',
          sig.level = 0.05, 
          insig = 'blank', p.mat = p_mat)
 
@@ -235,11 +234,11 @@ tara_corr <- tara_corr %>%
  select(-Date)
 
 tara_corr <- na.omit(tara_corr)
-tara_corr <- rcorr(as.matrix(tara_corr), type = 'spearman')
+tara_corr_out <- rcorr(as.matrix(tara_corr), type = 'spearman')
 
-p_mat <- tara_corr$P # this is the matrix of p_values
+p_mat <- tara_corr_out$P # this is the matrix of p_values
 diag(p_mat) <- 1 # because there are no p-values on the diagonals, we have to insert 1 here for the plot to 
-corrplot(tara_corr$r, type = 'upper',
+corrplot(tara_corr_out$r, type = 'upper',
                        sig.level = 0.05, insig = 'blank', p.mat = p_mat)
 
 ```
@@ -248,3 +247,17 @@ corrplot(tara_corr$r, type = 'upper',
 ___
 
 ### Linear regression
+
+Conduct linear regression between two variables that have strong, significant correlation (e.g., chl-a and secchi in Tarawera). then the challenge will be to conduct linear regression between two different variables (e.g., TN and chl-a)
+
+### T-test
+Could test the difference in chl-a between Rotorua and Rotoiti? Introduce transformations to meet normality assumptions. (introduce shapiro.test() to check normality?) Is this useful?
+
+### Wilcoxon rank sum
+This test is a non-parametric alternative to a t-test and, as such, is for non-normally distributed variables. Run wilcoxon test to compare if secchi depth is different between Tarawera and Okaro (two different trophic states)
+
+### ANOVA
+Test if chl- differs by season. challenge is to run this analysis for another lake
+
+### Trend analysis
+Insert James' stuff!
