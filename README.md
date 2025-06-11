@@ -196,7 +196,7 @@ ggplot(wq_okaro, aes(x = as.POSIXct(Time), y = Value, color = Parameter)) +
   xlab('Time')
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ``` r
 ggplot(wq_okaro, aes(x = Value, fill = Parameter)) +
@@ -205,7 +205,7 @@ ggplot(wq_okaro, aes(x = Value, fill = Parameter)) +
   theme_bw()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
 
 Alright, we have a time series of four variables. There are many things
 we can do to analyse this data. Let’s start with a correlation analysis.
@@ -329,7 +329,7 @@ diag(p_mat) <- 1  # because there are no p-values on the diagonals, we have to i
 corrplot(okaro_corr_out$r, type = "upper", sig.level = 0.05, insig = "blank", p.mat = p_mat)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ------------------------------------------------------------------------
 
@@ -374,7 +374,7 @@ corrplot(tara_corr_out$r, type = 'upper',
                        sig.level = 0.05, insig = 'blank', p.mat = p_mat)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 </details>
 
 ------------------------------------------------------------------------
@@ -455,7 +455,7 @@ ggplot(okaro_wide, aes(x = TN_gm3, y = chla_mgm3)) + geom_point() + geom_smooth(
     ## Warning: Removed 39 rows containing missing values or values outside the scale range
     ## (`geom_point()`).
 
-![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 
 Well, that was easy! We have our summary statistics and a nice plot with
 our linear regression. The `summary(model)` shows that both the
@@ -474,7 +474,7 @@ resid <- resid(model)
 hist(resid)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 ``` r
 shapiro.test(resid)
@@ -523,7 +523,7 @@ resid <- resid(model)
 hist(resid)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ``` r
 shapiro.test(resid)
@@ -556,7 +556,7 @@ ggplot(okaro_wide, aes(x = TN_gm3, y = log(chla_mgm3))) + geom_point() + geom_sm
     ## Warning: Removed 39 rows containing missing values or values outside the scale range
     ## (`geom_point()`).
 
-![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
 
 ------------------------------------------------------------------------
 
@@ -615,7 +615,7 @@ resid2 <- resid(model2)
 hist(resid2)
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 ``` r
 shapiro.test(resid2)
@@ -643,7 +643,7 @@ ggplot(okaro_wide, aes(x = secchi_m, y = log(chla_mgm3))) + geom_point() + geom_
     ## Warning: Removed 40 rows containing missing values or values outside the scale range
     ## (`geom_point()`).
 
-![](README_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
 </details>
 
 ------------------------------------------------------------------------
@@ -827,13 +827,13 @@ shapiro.test(log(rotoiti_wide$Site4_chla))
 hist(log(rotoiti_wide$OkawaBay_chla))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
 
 ``` r
 hist(log(rotoiti_wide$Site4_chla))
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-27-2.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-27-2.png)<!-- -->
 
 Great, things are looking pretty “normal” after log-transformation, so
 we are good to go ahead and run a t-test. Let’s also create a boxplot
@@ -861,7 +861,7 @@ t.test(log(rotoiti_wide$OkawaBay_chla), log(rotoiti_wide$Site4_chla), paired = T
 rotoiti_wide %>%
     pivot_longer(OkawaBay_chla:Site4_chla, names_to = "Site", values_to = "Chla") %>%
     ggplot(aes(x = Site, y = log(Chla), fill = Site)) + geom_boxplot() + theme_bw() +
-    stat_compare_means(method = "t.test", label = "p.format")
+    ylab("Log Chl-a") + stat_compare_means(method = "t.test", label = "p.format")
 ```
 
     ## Warning: Removed 92 rows containing non-finite outside the scale range
@@ -870,7 +870,7 @@ rotoiti_wide %>%
     ## Warning: Removed 92 rows containing non-finite outside the scale range
     ## (`stat_compare_means()`).
 
-![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
 
 The results of our t-test show that these two sites are significantly
 different from each other. Visually inspecting the boxplots also
@@ -910,7 +910,7 @@ rotoiti_wide %>%
     ## Warning: Removed 92 rows containing non-finite outside the scale range
     ## (`stat_compare_means()`).
 
-![](README_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
 
 With the Wilcoxon rank sum test on our raw data, we also show that there
 is a statistical difference between these two sites. Pretty cool to see
@@ -955,6 +955,39 @@ rotoiti_rotorua_wide <- rotoiti_rotorua_wide %>%
     select(-Parameter) %>%
     rename(Rotoiti_TP = "Lake Rotoiti at Site 4 (Integrated)", Rotorua_TP = "Lake Rotorua at Site 5 (Integrated)")
 
+## if running a t-test
+t.test(log(rotoiti_rotorua_wide$Rotoiti_TP), log(rotoiti_rotorua_wide$Rotorua_TP))
+```
+
+    ## 
+    ##  Welch Two Sample t-test
+    ## 
+    ## data:  log(rotoiti_rotorua_wide$Rotoiti_TP) and log(rotoiti_rotorua_wide$Rotorua_TP)
+    ## t = 3.0868, df = 231.54, p-value = 0.00227
+    ## alternative hypothesis: true difference in means is not equal to 0
+    ## 95 percent confidence interval:
+    ##  0.05506289 0.24940133
+    ## sample estimates:
+    ## mean of x mean of y 
+    ## -3.829669 -3.981901
+
+``` r
+rotoiti_rotorua_wide %>%
+    pivot_longer(Rotoiti_TP:Rotorua_TP, names_to = "Site", values_to = "TP") %>%
+    ggplot(aes(x = Site, y = log(TP), fill = Site)) + geom_boxplot() + theme_bw() +
+    stat_compare_means(method = "wilcox.test", label = "p.format")
+```
+
+    ## Warning: Removed 3 rows containing non-finite outside the scale range
+    ## (`stat_boxplot()`).
+
+    ## Warning: Removed 3 rows containing non-finite outside the scale range
+    ## (`stat_compare_means()`).
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+
+``` r
+## if running a wilcoxon test
 wilcox.test(rotoiti_rotorua_wide$Rotoiti_TP, rotoiti_rotorua_wide$Rotorua_TP)
 ```
 
@@ -974,19 +1007,155 @@ rotoiti_rotorua_wide %>%
 
     ## Warning: Removed 3 rows containing non-finite outside the scale range
     ## (`stat_boxplot()`).
-
-    ## Warning: Removed 3 rows containing non-finite outside the scale range
+    ## Removed 3 rows containing non-finite outside the scale range
     ## (`stat_compare_means()`).
 
-![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->
 </details>
 
 ------------------------------------------------------------------------
 
 ### ANOVA
 
-Test if chl- differs by season. challenge is to run this analysis for
-another lake
+What if we have more than two variables we want to test for differences
+across? This is where the ANOVA, or ANalysis Of VAriance comes in. An
+ANOVA assumes that your response variable is normally distributed and
+you are comparing differences across *categorical* predictors.
+
+In this example, we will use an ANOVA to test for differences in secchi
+depth across season in Lake Okaro.
+
+We will go back to our `wq_okaro` dataset. First, we need to filter to
+just secchi depth data and clean a few things up. Then, we test to see
+if secchi depth is normally distributed, and if not, we will transform
+it!
+
+``` r
+head(wq_okaro)
+```
+
+    ##                  Time Value  Parameter  Unit
+    ## 1 2015-01-22 10:27:00 0.900 TN (g/m^3) g/m^3
+    ## 2 2015-02-19 10:40:00 0.370 TN (g/m^3) g/m^3
+    ## 3 2015-03-19 09:50:00 0.400 TN (g/m^3) g/m^3
+    ## 4 2015-04-16 11:25:00 0.335 TN (g/m^3) g/m^3
+    ## 5 2015-05-21 09:50:00 0.583 TN (g/m^3) g/m^3
+    ## 6 2015-06-23 11:00:00 0.920 TN (g/m^3) g/m^3
+
+``` r
+secchi_okaro <- wq_okaro %>%
+    filter(Parameter == "VC - SD (m)") %>%
+    select(-Unit, -Parameter) %>%
+    rename(secchi_m = Value)
+
+hist(secchi_okaro$secchi_m)
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+
+``` r
+shapiro.test(secchi_okaro$secchi_m)
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  secchi_okaro$secchi_m
+    ## W = 0.94404, p-value = 0.0003429
+
+Looks like Secchi is not normally distributed, so we will create a new
+log-transformed column and run the shapiro test again to check.
+
+``` r
+secchi_okaro <- secchi_okaro %>%
+    mutate(log_secchi_m = log(secchi_m))
+
+hist(secchi_okaro$log_secchi_m)
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+
+``` r
+shapiro.test(secchi_okaro$log_secchi_m)
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  secchi_okaro$log_secchi_m
+    ## W = 0.97802, p-value = 0.09311
+
+P-value is greater than 0.05, so all looks good. We will run our ANOVA
+on log_secchi_m.
+
+Next, we need to create out `seasons` column, which is the variable by
+which we want to test if there are differences in Secchi depth. We first
+create a `month` column, and then create the `season` column, which is
+based on the month. I’ll do this first for ‘Summer’.
+
+``` r
+secchi_okaro <- secchi_okaro %>%
+    mutate(month = month(Time)) %>%
+    mutate(season = case_when(month %in% c(12, 1, 2) ~ "Summer"))
+```
+
+\_\_
+
+***Challenge 8:*** *Now, finish creating the `season` column using
+`case_when` for “Autumn”, “Winter” and “Spring”. You will need to add
+`TRUE ~ season` as the last argument so that the values we set for
+Summer in the previous chunk of code remain.*
+
+<details>
+<summary>
+Click to see a solution
+</summary>
+
+``` r
+secchi_okaro <- secchi_okaro %>%
+    mutate(season = case_when(month %in% c(3, 4, 5) ~ "Autumn", month %in% c(6, 7,
+        8) ~ "Winter", month %in% c(9, 10, 11) ~ "Spring", TRUE ~ season))
+```
+
+</details>
+
+------------------------------------------------------------------------
+
+Now that we have our `season` column, let’s make a boxplot of the data
+by season to see if there are any obvious patterns. We will order the
+season as a factor first to make sure it plots in an order that makes
+sense.
+
+``` r
+secchi_okaro$season <- factor(secchi_okaro$season, levels = c("Spring", "Summer",
+    "Autumn", "Winter"))
+
+ggplot(secchi_okaro, aes(x = season, y = secchi_m)) + geom_boxplot() + theme_bw() +
+    ylab("Secchi depth (m)")
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
+
+Ok, there are some clear differences between the seasons here. I have a
+feeling this ANOVA is gonna be interesting…We will use the function
+`aov` to run the ANOVA on the log-transformed column and `summary` to
+look at the results.
+
+``` r
+anova_secchi_okaro <- aov(log_secchi_m ~ season, data = secchi_okaro)
+summary(anova_secchi_okaro)
+```
+
+    ##             Df Sum Sq Mean Sq F value   Pr(>F)    
+    ## season       3  7.668  2.5561   11.31 2.02e-06 ***
+    ## Residuals   96 21.689  0.2259                     
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+The Pr(\>F) is very small, which tells us that there is a significant
+differences between seasons for Secchi depth.
+
+*Could add a challenge to do ANOVA on another lake?*
 
 ### Trend analysis
 

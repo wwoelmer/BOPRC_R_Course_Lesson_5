@@ -458,6 +458,7 @@ rotoiti_wide %>%
   ggplot(aes(x = Site, y = log(Chla), fill = Site)) +
   geom_boxplot() +
   theme_bw() +
+  ylab('Log Chl-a') +
   stat_compare_means(method = "t.test", label = "p.format") 
 
 ```
@@ -513,7 +514,18 @@ rotoiti_rotorua_wide <- rotoiti_rotorua_wide %>%
   select(-Parameter) %>% 
   rename(Rotoiti_TP = "Lake Rotoiti at Site 4 (Integrated)",
          Rotorua_TP = "Lake Rotorua at Site 5 (Integrated)")
-  
+
+## if running a t-test
+t.test(log(rotoiti_rotorua_wide$Rotoiti_TP), log(rotoiti_rotorua_wide$Rotorua_TP))
+
+rotoiti_rotorua_wide %>% 
+  pivot_longer(Rotoiti_TP:Rotorua_TP, names_to = 'Site', values_to = 'TP') %>% 
+  ggplot(aes(x = Site, y = log(TP), fill = Site)) +
+  geom_boxplot() +
+  theme_bw() +
+  stat_compare_means(method = "wilcox.test", label = "p.format") 
+
+## if running a wilcoxon test  
 wilcox.test(rotoiti_rotorua_wide$Rotoiti_TP, rotoiti_rotorua_wide$Rotorua_TP)
 
 rotoiti_rotorua_wide %>% 
@@ -529,9 +541,101 @@ rotoiti_rotorua_wide %>%
 ___
 
 
-
 ### ANOVA
-Test if chl- differs by season. challenge is to run this analysis for another lake
+What if we have more than two variables we want to test for differences across? This is where the ANOVA, or ANalysis Of VAriance comes in. An ANOVA assumes that your response variable is normally distributed and you are comparing differences across *categorical* predictors.
+
+In this example, we will use an ANOVA to test for differences in secchi depth across season in Lake Okaro.
+
+We will go back to our `wq_okaro` dataset. First, we need to filter to just secchi depth data and clean a few things up. Then, we test to see if secchi depth is normally distributed, and if not, we will transform it!
+
+```{r message=FALSE,tidy=TRUE}
+
+head(wq_okaro)
+
+secchi_okaro <- wq_okaro %>% 
+  filter(Parameter=="VC - SD (m)") %>% 
+  select(-Unit, -Parameter) %>% 
+  rename('secchi_m' = Value)
+
+hist(secchi_okaro$secchi_m)
+shapiro.test(secchi_okaro$secchi_m)
+
+```
+
+
+Looks like Secchi is not normally distributed, so we will create a new log-transformed column and run the shapiro test again to check.
+
+```{r message=FALSE,tidy=TRUE}
+
+secchi_okaro <- secchi_okaro %>% 
+  mutate(log_secchi_m = log(secchi_m))
+
+hist(secchi_okaro$log_secchi_m)
+shapiro.test(secchi_okaro$log_secchi_m)
+
+```
+
+P-value is greater than 0.05, so all looks good. We will run our ANOVA on log_secchi_m.
+
+Next, we need to create out `seasons` column, which is the variable by which we want to test if there are differences in Secchi depth. We first create a `month` column, and then create the `season` column, which is based on the month. I'll do this first for 'Summer'.
+
+```{r message=FALSE,tidy=TRUE}
+
+secchi_okaro <- secchi_okaro %>% 
+  mutate(month = month(Time)) %>% 
+  mutate(season = case_when(month %in% c(12, 1, 2) ~ 'Summer'))
+
+```
+
+
+
+__
+
+***Challenge 8:*** *Now, finish creating the `season` column using `case_when` for "Autumn", "Winter" and "Spring". You will need to add `TRUE ~ season` as the last argument so that the values we set for Summer in the previous chunk of code remain.*
+
+<details>
+<summary>Click to see a solution</summary>
+
+```{r message=FALSE,tidy=TRUE}
+secchi_okaro <- secchi_okaro %>% 
+  mutate(season = case_when(month %in% c(3, 4, 5) ~ "Autumn",
+                            month %in% c(6, 7, 8) ~ "Winter",
+                            month %in% c(9, 10, 11) ~ "Spring",
+                            TRUE ~ season))
+```
+</details>
+
+___
+
+Now that we have our `season` column, let's make a boxplot of the data by season to see if there are any obvious patterns. We will order the season as a factor first to make sure it plots in an order that makes sense.
+
+```{r message=FALSE,tidy=TRUE}
+secchi_okaro$season <- factor(secchi_okaro$season, 
+                              levels = c('Spring',
+                                         'Summer',
+                                         'Autumn',
+                                         'Winter'))
+
+ggplot(secchi_okaro, aes(x= season, y = secchi_m)) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab('Secchi depth (m)')
+```
+
+Ok, there are some clear differences between the seasons here. I have a feeling this ANOVA is gonna be interesting...We will use the function `aov` to run the ANOVA on the log-transformed column and `summary` to look at the results.
+
+```{r message=FALSE,tidy=TRUE}
+
+anova_secchi_okaro <- aov(log_secchi_m ~ season, data = secchi_okaro)
+summary(anova_secchi_okaro)
+
+```
+
+
+The Pr(>F) is very small, which tells us that there is a significant differences between seasons for Secchi depth.
+
+*Could add a challenge to do ANOVA on another lake?*
+
 
 ### Trend analysis
 Insert James' stuff!
