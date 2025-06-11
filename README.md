@@ -30,6 +30,8 @@ The main packages that we will use in this tutorial are:
 - **lubridate**
 - **Hmisc**
 - **corrplot**
+- **ggpmisc**
+- **ggpubr**
 
 Before attempting to install these packages, make sure your Primary CRAN
 Repository is set to:
@@ -52,6 +54,15 @@ library(tidyverse)
 library(lubridate)
 library(Hmisc)
 library(corrplot)
+library(ggpmisc)
+```
+
+    ## Warning: package 'ggpmisc' was built under R version 4.4.3
+
+    ## Warning: package 'ggpp' was built under R version 4.4.3
+
+``` r
+library(ggpubr)
 ```
 
 First we will load in our data. We will use the same water quality data
@@ -102,8 +113,8 @@ Here, we will use a function called `parse_date_time` which looks at the
 formats that the column will be in. Here, we list two formats, the first
 one has YMD and HMS (hours, minutes, seconds), the second one just has
 YMD, as some of the values in the `Time` column don’t have an associated
-time next to the date. We pair this with the `mutate` function, which we
-will learn more about below.
+time next to the date. We pair this with the `mutate` function to
+re-write our `Time` column.
 
 NOTE: there are many ways to format/parse dates and times in R. This is
 just one example!
@@ -152,11 +163,14 @@ unique(wq$LocationName)
 ------------------------------------------------------------------------
 
 That helps us get a better understanding of the dataset that we’re
-working with. Since we are going to do correlation analysis first, let’s
-focus on just one site and look at the relationships between variables.
-We will filter the data to only select “Lake Okaro at Site 1
-(Integrated)” and we will create a new object named `wq_okaro` so we
-keep all the other lake data in the `wq` dataframe.
+working with and is something I will do often while working in R to
+remind myself.
+
+Since we are going to do correlation analysis first, let’s focus on just
+one site and look at the relationships between variables in the
+`Parameter` column. We will filter the data to only select “Lake Okaro
+at Site 1 (Integrated)” and we will create a new dataframe named
+`wq_okaro` so we keep all the other lake data in the `wq` dataframe.
 
 ``` r
 wq_okaro <- wq %>% 
@@ -171,7 +185,8 @@ wq_okaro <- wq_okaro %>%
   select(Time, Value, Parameter, Unit)
 ```
 
-Let’s plot the data to make sure everything looks good
+Let’s plot the data to make sure everything looks good. I like to do a
+`geom_point` plot, as well as a histogram, using `geom_histogram`
 
 ``` r
 ggplot(wq_okaro, aes(x = as.POSIXct(Time), y = Value, color = Parameter)) +
@@ -181,7 +196,7 @@ ggplot(wq_okaro, aes(x = as.POSIXct(Time), y = Value, color = Parameter)) +
   xlab('Time')
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ``` r
 ggplot(wq_okaro, aes(x = Value, fill = Parameter)) +
@@ -190,7 +205,7 @@ ggplot(wq_okaro, aes(x = Value, fill = Parameter)) +
   theme_bw()
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-8-2.png)<!-- -->
 
 Alright, we have a time series of four variables. There are many things
 we can do to analyse this data. Let’s start with a correlation analysis.
@@ -200,12 +215,12 @@ we can do to analyse this data. Let’s start with a correlation analysis.
 In order to conduct a correlation analysis, we need to do some
 formatting/rearranging. First, we need to make the data wide, but we
 also have to create a `Date` column which doesn’t include the time so
-that it is common across the variables. We will also remove the Unit
+that it is common across the variables. We will also remove the `Unit`
 column for this reason (and we don’t need that column for this anyway
 since the units are stored in the Parameter names)
 
 ``` r
-okaro_corr <- wq_okaro %>% 
+okaro_wide <- wq_okaro %>% 
   mutate(Date = as.Date(Time)) %>% 
   select(-Time, -Unit) %>% 
   group_by(Date, Parameter) %>% 
@@ -214,13 +229,13 @@ okaro_corr <- wq_okaro %>%
   ungroup()
 ```
 
-Open up your new `okaro_corr` data and check it out. Those column names
+Open up your new `okaro_wide` data and check it out. Those column names
 have gaps and symbols in them, which might cause us problems later.
 Let’s rename the columns using the function `rename`. I’ll show you one
 example
 
 ``` r
-okaro_corr <- okaro_corr %>% 
+okaro_wide <- okaro_wide %>% 
   rename('chla_mgm3' = "CHLA (mg/m^3)") # the format is new name = old name
 ```
 
@@ -235,7 +250,7 @@ Click to see a solution
 </summary>
 
 ``` r
-okaro_corr <- okaro_corr %>%
+okaro_wide <- okaro_wide %>%
     rename(TN_gm3 = "TN (g/m^3)", TP_gm3 = "TP (g/m^3)", secchi_m = "VC - SD (m)")
 ```
 
@@ -243,8 +258,8 @@ okaro_corr <- okaro_corr %>%
 
 ------------------------------------------------------------------------
 
-Great, your `okaro_corr` dataframe should now have the columns “Date”,
-“chla_mgm3”, “TN_gm3”, “TP_gm3)”, and “secchi_m”.
+Great, your `okaro_wide` dataframe should now have the columns `Date`,
+`chla_mgm3`, `TN_gm3`, `TP_gm3`, and `secchi_m.`
 
 The next thing we need to do in order to run the correlation analysis is
 to remove the `Date` column. We aren’t interested in how date is
@@ -253,8 +268,8 @@ they are correlated with each other.
 
 ------------------------------------------------------------------------
 
-***Challenge 3:*** *Use the `select` function to remove the Date
-column.*
+***Challenge 3:*** *Use the `select` function to remove the Date column.
+Make this a new dataframe called `okaro_corr`.*
 
 <details>
 <summary>
@@ -262,7 +277,7 @@ Click to see a solution
 </summary>
 
 ``` r
-okaro_corr <- okaro_corr %>%
+okaro_corr <- okaro_wide %>%
     select(-Date)
 ```
 
@@ -282,6 +297,7 @@ okaro_corr <- as.matrix(okaro_corr)
 Now let’s run the correlation analysis using the `rcorr` function. The
 default type of analysis is Pearson, which assumes normality. Here, we
 will specify Spearman because our data are not all normally distributed
+(as we learned in our histogram plot earlier).
 
 ``` r
 okaro_corr_out <- rcorr(okaro_corr, type = "spearman")
@@ -313,12 +329,16 @@ diag(p_mat) <- 1  # because there are no p-values on the diagonals, we have to i
 corrplot(okaro_corr_out$r, type = "upper", sig.level = 0.05, insig = "blank", p.mat = p_mat)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
 
 ------------------------------------------------------------------------
 
 ***Challenge 3:*** *Repeat the correlation analysis for Lake Tarawera.
-How do the correlations compare between the two lakes?*
+How do the correlations compare between the two lakes? Remember, you
+need to first subset the `wq` dataframe for Lake Tarawera, then
+`pivot_wider` so your columns are your variables, `rename` your columns
+to get rid of symbols and spaces, remove the `Date` column and any NA’s,
+then run your correlation using `rcorr`, and then plot your output!*
 
 <details>
 <summary>
@@ -330,14 +350,14 @@ wq_tara <- wq %>%
   filter(LocationName=='Lake Tarawera at Site 5 (Integrated)') %>% 
   select(Time, Value, Parameter, Unit)
 
-tara_corr <- wq_tara %>% 
+tara_wide <- wq_tara %>% 
   mutate(Date = as.Date(Time)) %>% # keeping these lines in our workflow to remove Time and Unit
   select(-Time, -Unit) %>% 
   group_by(Date, Parameter) %>% 
   summarise(Value = mean(Value, na.rm = TRUE)) %>% 
   pivot_wider(names_from = 'Parameter', values_from = 'Value')
 
-tara_corr <- tara_corr %>% 
+tara_wide <- tara_wide %>% 
   rename('chla_mgm3' = "CHLA (mg/m^3)",
          'TN_gm3' = "TN (g/m^3)",
          "TP_gm3" = "TP (g/m^3)",
@@ -345,7 +365,7 @@ tara_corr <- tara_corr %>%
  ungroup() %>% 
  select(-Date)
 
-tara_corr <- na.omit(tara_corr)
+tara_corr <- na.omit(tara_wide)
 tara_corr_out <- rcorr(as.matrix(tara_corr), type = 'spearman')
 
 p_mat <- tara_corr_out$P # this is the matrix of p_values
@@ -354,30 +374,614 @@ corrplot(tara_corr_out$r, type = 'upper',
                        sig.level = 0.05, insig = 'blank', p.mat = p_mat)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](README_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 </details>
 
 ------------------------------------------------------------------------
 
 ### Linear regression
 
-Conduct linear regression between two variables that have strong,
-significant correlation (e.g., chl-a and secchi in Tarawera). then the
-challenge will be to conduct linear regression between two different
-variables (e.g., TN and chl-a)
+Next, we will conduct linear regression between two variables which we
+think are causally related.
 
-### T-test
+Based on our correlation plots above, let’s do this for chl-a and TN in
+Lake Okaro which have a strong, positive correlation. We will go back to
+our `okaro_wide` dataframe for this, which we created earlier. We will
+use the function `lm()` to conduct linear regression. Then, we use
+`summary()` to shows us the results of the model. We will also plot this
+to visually show the relationship, and add the equation, R-squared and
+p-value onto the plot using the function `stat_poly_eq`. You can
+customize what information you want to show up (equation, listed as
+`..eq.label..`, r-squared, listed as `..rr.label..`, etc.)
 
-Could test the difference in chl-a between Rotorua and Rotoiti?
-Introduce transformations to meet normality assumptions. (introduce
-shapiro.test() to check normality?) Is this useful?
+``` r
+head(okaro_wide)
+```
 
-### Wilcoxon rank sum
+    ## # A tibble: 6 × 5
+    ##   Date       chla_mgm3 TN_gm3 TP_gm3 secchi_m
+    ##   <date>         <dbl>  <dbl>  <dbl>    <dbl>
+    ## 1 2015-01-22     23.1   0.900 0.0250    0.850
+    ## 2 2015-02-19      1.4   0.37  0.0110    3.42 
+    ## 3 2015-03-19      4.40  0.400 0.0170    4.07 
+    ## 4 2015-04-16      4.60  0.335 0.0122    6.05 
+    ## 5 2015-05-21      5.10  0.583 0.023     7.15 
+    ## 6 2015-06-23      4     0.920 0.0595    7.35
 
-This test is a non-parametric alternative to a t-test and, as such, is
-for non-normally distributed variables. Run wilcoxon test to compare if
-secchi depth is different between Tarawera and Okaro (two different
-trophic states)
+``` r
+model <- lm(chla_mgm3 ~ TN_gm3, data = okaro_wide)
+summary(model)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = chla_mgm3 ~ TN_gm3, data = okaro_wide)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -35.058  -7.923   0.629   6.175  61.660 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  -19.278      3.715   -5.19 1.21e-06 ***
+    ## TN_gm3        55.804      5.098   10.95  < 2e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 16.11 on 94 degrees of freedom
+    ##   (39 observations deleted due to missingness)
+    ## Multiple R-squared:  0.5604, Adjusted R-squared:  0.5557 
+    ## F-statistic: 119.8 on 1 and 94 DF,  p-value: < 2.2e-16
+
+``` r
+ggplot(okaro_wide, aes(x = TN_gm3, y = chla_mgm3)) + geom_point() + geom_smooth(method = "lm",
+    se = TRUE) + theme_bw() + stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label..,
+    ..p.value.label.., sep = "~~~"))) + theme_bw() + ylab(expression(Chl * "-a" ~
+    (mg/m^3)))
+```
+
+    ## Warning: The dot-dot notation (`..eq.label..`) was deprecated in ggplot2 3.4.0.
+    ## ℹ Please use `after_stat(eq.label)` instead.
+    ## This warning is displayed once every 8 hours.
+    ## Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
+    ## generated.
+
+    ## Warning: Removed 39 rows containing non-finite outside the scale range
+    ## (`stat_smooth()`).
+
+    ## Warning: Removed 39 rows containing non-finite outside the scale range
+    ## (`stat_poly_eq()`).
+
+    ## Warning: Removed 39 rows containing missing values or values outside the scale range
+    ## (`geom_point()`).
+
+![](README_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+Well, that was easy! We have our summary statistics and a nice plot with
+our linear regression. The `summary(model)` shows that both the
+intercept and slope are significant and our adjusted R-squared is 0.56.
+However, it’s always good to plot some diagnostics of statistical models
+and make sure that the proper assumptions are being met.
+
+Let’s look at our residuals. Remember for a linear regression, our
+residuals should be normally distributed. We will use the function
+`shapiro.test` which tests for normality. If the p-value of the
+Shapiro-Wilk is less than 0.05, that indicates that the variable is
+*not* normally distributed.
+
+``` r
+resid <- resid(model)
+hist(resid)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+
+``` r
+shapiro.test(resid)
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  resid
+    ## W = 0.9152, p-value = 1.157e-05
+
+Uh oh, the Shapiro-Wilk test returns a p-value of \< 0.05, which means
+our residuals are not normally distributed and we have violated the
+assumptions of the linear regression–not good! We can address this by
+transforming our data to try and achieve a normal distribution of the
+residuals. Typically, you can try by first transforming the response
+variable, in our case chl-a.
+
+``` r
+model <- lm(log(chla_mgm3) ~ TN_gm3, data = okaro_wide)
+summary(model)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = log(chla_mgm3) ~ TN_gm3, data = okaro_wide)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -1.99807 -0.49331 -0.02981  0.61071  1.61268 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)   0.7974     0.1815   4.395 2.91e-05 ***
+    ## TN_gm3        2.2160     0.2490   8.899 4.03e-14 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.7869 on 94 degrees of freedom
+    ##   (39 observations deleted due to missingness)
+    ## Multiple R-squared:  0.4573, Adjusted R-squared:  0.4515 
+    ## F-statistic: 79.19 on 1 and 94 DF,  p-value: 4.028e-14
+
+``` r
+resid <- resid(model)
+hist(resid)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+
+``` r
+shapiro.test(resid)
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  resid
+    ## W = 0.99111, p-value = 0.7761
+
+Viola, that looks much better–our p-value is 0.78 after log-transforming
+chl-a, which indicates that the residuals are normally distributed and
+the assumptions of a linear regression have been met. Let’s also update
+our plot with the new model and log transform the y-axis
+
+``` r
+ggplot(okaro_wide, aes(x = TN_gm3, y = log(chla_mgm3))) + geom_point() + geom_smooth(method = "lm",
+    se = TRUE) + theme_bw() + stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label..,
+    ..p.value.label.., sep = "~~~"))) + theme_bw() + ylab(expression(Log ~ Chl *
+    "-a" ~ (mg/m^3)))
+```
+
+    ## Warning: Removed 39 rows containing non-finite outside the scale range
+    ## (`stat_smooth()`).
+
+    ## Warning: Removed 39 rows containing non-finite outside the scale range
+    ## (`stat_poly_eq()`).
+
+    ## Warning: Removed 39 rows containing missing values or values outside the scale range
+    ## (`geom_point()`).
+
+![](README_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+
+------------------------------------------------------------------------
+
+***Challenge 4:*** *Repeat the linear regression analysis, this time
+between chl-a and secchi depth at Lake Okaro. Make a similar plot with
+`geom_smooth` and add the equation, R2, and p-value to the plot. Test to
+see if the residuals are normally distributed and re-adjust your model
+and plot accordingly.*
+
+<details>
+<summary>
+Click to see a solution
+</summary>
+
+``` r
+head(okaro_wide)
+```
+
+    ## # A tibble: 6 × 5
+    ##   Date       chla_mgm3 TN_gm3 TP_gm3 secchi_m
+    ##   <date>         <dbl>  <dbl>  <dbl>    <dbl>
+    ## 1 2015-01-22     23.1   0.900 0.0250    0.850
+    ## 2 2015-02-19      1.4   0.37  0.0110    3.42 
+    ## 3 2015-03-19      4.40  0.400 0.0170    4.07 
+    ## 4 2015-04-16      4.60  0.335 0.0122    6.05 
+    ## 5 2015-05-21      5.10  0.583 0.023     7.15 
+    ## 6 2015-06-23      4     0.920 0.0595    7.35
+
+``` r
+model2 <- lm(log(chla_mgm3) ~ secchi_m, data = okaro_wide)
+summary(model2)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = log(chla_mgm3) ~ secchi_m, data = okaro_wide)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -2.00524 -0.37442 -0.04635  0.46178  2.92624 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  3.69277    0.17683  20.883  < 2e-16 ***
+    ## secchi_m    -0.39505    0.04288  -9.212  9.5e-15 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.7694 on 93 degrees of freedom
+    ##   (40 observations deleted due to missingness)
+    ## Multiple R-squared:  0.4771, Adjusted R-squared:  0.4715 
+    ## F-statistic: 84.86 on 1 and 93 DF,  p-value: 9.498e-15
+
+``` r
+resid2 <- resid(model2)
+hist(resid2)
+```
+
+![](README_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+
+``` r
+shapiro.test(resid2)
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  resid2
+    ## W = 0.97526, p-value = 0.06868
+
+``` r
+ggplot(okaro_wide, aes(x = secchi_m, y = log(chla_mgm3))) + geom_point() + geom_smooth(method = "lm",
+    se = TRUE) + theme_bw() + stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label..,
+    ..p.value.label.., sep = "~~~"))) + theme_bw() + xlab("Secchi depth (m)") + ylab(expression(Log ~
+    Chl * "-a" ~ (mg/m^3)))
+```
+
+    ## Warning: Removed 40 rows containing non-finite outside the scale range
+    ## (`stat_smooth()`).
+
+    ## Warning: Removed 40 rows containing non-finite outside the scale range
+    ## (`stat_poly_eq()`).
+
+    ## Warning: Removed 40 rows containing missing values or values outside the scale range
+    ## (`geom_point()`).
+
+![](README_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
+</details>
+
+------------------------------------------------------------------------
+
+### Testing for statistical differences between two variables: t-tests (parametric) and Wilcoxon rank-sum (non-parametric)
+
+In our next example, we are going to test if there is a statistical
+difference between two sets of data. We often need to do this in ecology
+and environmental science for a number of reasons. For example, is the
+community composition at one site different from another?
+
+In our case, we will test to see if the values of a given water quality
+variable is different between lakes or sites. Let’s test to see if the
+data collected at Okawa Bay in the shallower western bay of lake
+Rotoiti, is significantly different from data collected at Site 4 in
+Lake Rotoiti, in the much deeper eastern bay of the lake. This will tell
+us something about how spatially heterogeneous Lake Rotoiti is. Let’s
+focus on chl-a dynamics, as this relates to algal blooms and is of
+societal importance.
+
+First, we need to do a little data manipulating to get the data for our
+two sites in the right format. We will go back to our original `wq`
+dataset, select the relevant columns, and filter for our two sites.
+
+``` r
+wq_rotoiti <- wq %>%
+    select(Time, LocationName, Value, Parameter, Unit) %>%
+    filter(LocationName %in% c("Lake Rotoiti at Okawa Bay (Integrated)", "Lake Rotoiti at Site 4 (Integrated)"))
+
+head(wq_rotoiti)
+```
+
+    ##                  Time                        LocationName Value  Parameter
+    ## 1 2015-07-21 13:45:00 Lake Rotoiti at Site 4 (Integrated) 0.176 TN (g/m^3)
+    ## 2 2015-08-18 10:45:00 Lake Rotoiti at Site 4 (Integrated) 0.156 TN (g/m^3)
+    ## 3 2015-09-15 11:50:00 Lake Rotoiti at Site 4 (Integrated) 0.148 TN (g/m^3)
+    ## 4 2015-10-20 00:00:00 Lake Rotoiti at Site 4 (Integrated) 0.154 TN (g/m^3)
+    ## 5 2015-11-17 11:45:00 Lake Rotoiti at Site 4 (Integrated) 0.181 TN (g/m^3)
+    ## 6 2015-12-15 10:55:00 Lake Rotoiti at Site 4 (Integrated) 0.199 TN (g/m^3)
+    ##    Unit
+    ## 1 g/m^3
+    ## 2 g/m^3
+    ## 3 g/m^3
+    ## 4 g/m^3
+    ## 5 g/m^3
+    ## 6 g/m^3
+
+------------------------------------------------------------------------
+
+***Challenge 5:*** *We also need to select just the chl-a data. Filter
+the new dataset `wq_rotoiti` so that the only Parameter is chla*
+
+<details>
+<summary>
+Click to see a solution
+</summary>
+
+``` r
+unique(wq_rotoiti$Parameter)  # first look at what the values are in this column, then copy the one you need
+```
+
+    ## [1] "TN (g/m^3)"    "TP (g/m^3)"    "CHLA (mg/m^3)" "VC - SD (m)"
+
+``` r
+wq_rotoiti <- wq_rotoiti %>%
+    filter(Parameter == "CHLA (mg/m^3)")
+```
+
+</details>
+
+------------------------------------------------------------------------
+
+Now that we have filtered for our sites and for chl-a, we will
+`pivot_wider` so our site names are in separate columns. Similar to when
+we used `pivot_wider` for Okaro and Tarawera above, we first need to
+create a `Date` column (since the time of sample collection is not
+relevant here), and remove the `Unit` column.
+
+``` r
+rotoiti_wide <- wq_rotoiti %>%
+    mutate(Date = as.Date(Time)) %>%
+    select(-Time, -Unit) %>%
+    group_by(Date, LocationName, Parameter) %>%
+    summarise(Value = mean(Value, na.rm = TRUE)) %>%
+    pivot_wider(names_from = "LocationName", values_from = "Value") %>%
+    ungroup()
+
+head(rotoiti_wide)
+```
+
+    ## # A tibble: 6 × 4
+    ##   Date       Parameter     Lake Rotoiti at Okawa Bay (I…¹ Lake Rotoiti at Site…²
+    ##   <date>     <chr>                                  <dbl>                  <dbl>
+    ## 1 2015-01-20 CHLA (mg/m^3)                          15.6                      NA
+    ## 2 2015-02-17 CHLA (mg/m^3)                           7.40                     NA
+    ## 3 2015-03-18 CHLA (mg/m^3)                         117                        NA
+    ## 4 2015-04-14 CHLA (mg/m^3)                           4                        NA
+    ## 5 2015-05-19 CHLA (mg/m^3)                           1.9                      NA
+    ## 6 2015-06-16 CHLA (mg/m^3)                           3.8                      NA
+    ## # ℹ abbreviated names: ¹​`Lake Rotoiti at Okawa Bay (Integrated)`,
+    ## #   ²​`Lake Rotoiti at Site 4 (Integrated)`
+
+------------------------------------------------------------------------
+
+***Challenge 6:*** *Ok, our data frame has the columns `Date`,
+`Parameter`, and one for each site at Rotoiti. We don’t actually need
+the Parameter column anymore, since it’s only chl-a, so let’s remove
+that. But, let’s rename our site columns to 1) avoid spaces in the
+column names, and 2) add ‘chl-a’ into the column name so we don’t lose
+track of what data we are working with. Rename the new columns
+`OkawaBay_chla` and `Site4_chla`*
+
+<details>
+<summary>
+Click to see a solution
+</summary>
+
+``` r
+rotoiti_wide <- rotoiti_wide %>%
+    select(-Parameter) %>%
+    rename(OkawaBay_chla = "Lake Rotoiti at Okawa Bay (Integrated)", Site4_chla = "Lake Rotoiti at Site 4 (Integrated)")
+```
+
+</details>
+
+------------------------------------------------------------------------
+
+Next, we need to check if chl-a and TN are normally distributed, which
+is a requirement for t-tests. You might already have a guess at how this
+will go based on our `shapiro.test` results from the linear regression,
+but here, instead of testing the residuals of our model for normality,
+we are testing the original data.
+
+``` r
+shapiro.test(rotoiti_wide$OkawaBay_chla)
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  rotoiti_wide$OkawaBay_chla
+    ## W = 0.62199, p-value = 9.098e-16
+
+``` r
+shapiro.test(rotoiti_wide$Site4_chla)
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  rotoiti_wide$Site4_chla
+    ## W = 0.886, p-value = 1.249e-07
+
+Both sites have a very small p-value, which means they fail the
+Shapiro-Wilks normality test so, if we want to use a t-test we will need
+to transform them. Log-transformation is one common way to do this, like
+we did above with chl-a data at Lake Okaro. We will also look at a
+histogram to visually examine normality.
+
+``` r
+shapiro.test(log(rotoiti_wide$OkawaBay_chla))
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  log(rotoiti_wide$OkawaBay_chla)
+    ## W = 0.98838, p-value = 0.4324
+
+``` r
+shapiro.test(log(rotoiti_wide$Site4_chla))
+```
+
+    ## 
+    ##  Shapiro-Wilk normality test
+    ## 
+    ## data:  log(rotoiti_wide$Site4_chla)
+    ## W = 0.98987, p-value = 0.5942
+
+``` r
+hist(log(rotoiti_wide$OkawaBay_chla))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+
+``` r
+hist(log(rotoiti_wide$Site4_chla))
+```
+
+![](README_files/figure-gfm/unnamed-chunk-27-2.png)<!-- -->
+
+Great, things are looking pretty “normal” after log-transformation, so
+we are good to go ahead and run a t-test. Let’s also create a boxplot
+which will show the distributions of data at each site. We will need to
+`pivot_longer` again to show the boxplots with the sites on the x-axis,
+so we will do this in the tidyverse pipe style.
+
+``` r
+t.test(log(rotoiti_wide$OkawaBay_chla), log(rotoiti_wide$Site4_chla), paired = TRUE)
+```
+
+    ## 
+    ##  Paired t-test
+    ## 
+    ## data:  log(rotoiti_wide$OkawaBay_chla) and log(rotoiti_wide$Site4_chla)
+    ## t = 8.5839, df = 65, p-value = 2.689e-12
+    ## alternative hypothesis: true mean difference is not equal to 0
+    ## 95 percent confidence interval:
+    ##  0.6182031 0.9930897
+    ## sample estimates:
+    ## mean difference 
+    ##       0.8056464
+
+``` r
+rotoiti_wide %>%
+    pivot_longer(OkawaBay_chla:Site4_chla, names_to = "Site", values_to = "Chla") %>%
+    ggplot(aes(x = Site, y = log(Chla), fill = Site)) + geom_boxplot() + theme_bw() +
+    stat_compare_means(method = "t.test", label = "p.format")
+```
+
+    ## Warning: Removed 92 rows containing non-finite outside the scale range
+    ## (`stat_boxplot()`).
+
+    ## Warning: Removed 92 rows containing non-finite outside the scale range
+    ## (`stat_compare_means()`).
+
+![](README_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+
+The results of our t-test show that these two sites are significantly
+different from each other. Visually inspecting the boxplots also
+supports this. Cool!
+
+## Wilcoxon rank sum
+
+Now, let’s say we didn’t want to log-transform our data. We can use
+non-parametric statistical tests to look for differences between
+non-normally distributed datasets. We will use the Wilcoxon rank sum
+test for this (sometimes called the Mann-Whitney test).
+
+Let’s run the test using the `wilcoxon.test` function, and also create
+our boxplot figure.
+
+``` r
+wilcox.test(rotoiti_wide$OkawaBay_chla, rotoiti_wide$Site4_chla, paired = TRUE)
+```
+
+    ## 
+    ##  Wilcoxon signed rank test with continuity correction
+    ## 
+    ## data:  rotoiti_wide$OkawaBay_chla and rotoiti_wide$Site4_chla
+    ## V = 2046.5, p-value = 1.877e-09
+    ## alternative hypothesis: true location shift is not equal to 0
+
+``` r
+rotoiti_wide %>%
+    pivot_longer(OkawaBay_chla:Site4_chla, names_to = "Site", values_to = "Chla") %>%
+    ggplot(aes(x = Site, y = Chla, fill = Site)) + geom_boxplot() + theme_bw() +
+    stat_compare_means(method = "wilcox.test", label = "p.format")
+```
+
+    ## Warning: Removed 92 rows containing non-finite outside the scale range
+    ## (`stat_boxplot()`).
+
+    ## Warning: Removed 92 rows containing non-finite outside the scale range
+    ## (`stat_compare_means()`).
+
+![](README_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+
+With the Wilcoxon rank sum test on our raw data, we also show that there
+is a statistical difference between these two sites. Pretty cool to see
+that two locations within the same lake are significantly different from
+each!
+
+\_\_
+
+***Challenge 7:*** *Run either a t-test or a Wilcoxon rank sum test to
+test if there is a significant difference between Lake Rotoiti at Site 4
+and Lake Rotorua at Site 5. You can choose whichever water quality
+variable you’d like to look at. Remember, you will need to start with
+the `wq` dataframe, select the relevant columns, filter LocationName and
+Parameter. Then you will pivot_wider (don’t forget to make a Date column
+and remove Unit), rename your columns, and run your statistical test
+plus a plot! HINT: Samples are not collected on the same date between
+Rotorua and Rotoiti, so you will need to format your dates as Month-Year
+(e.g., Jan-2021). You can do this using this line of code within your
+tidyverse pipe:
+`mutate(Date = format(as.Date(Time), format = '%b-%Y'))`*
+
+<details>
+<summary>
+Click to see a solution
+</summary>
+
+``` r
+rotoiti_rotorua <- wq %>%
+    select(Time, LocationName, Value, Parameter, Unit) %>%
+    filter(LocationName %in% c("Lake Rotorua at Site 5 (Integrated)", "Lake Rotoiti at Site 4 (Integrated)"),
+        Parameter == "TP (g/m^3)")
+
+rotoiti_rotorua_wide <- rotoiti_rotorua %>%
+    mutate(Date = format(as.Date(Time), format = "%b-%Y")) %>%
+    select(-Time, -Unit) %>%
+    group_by(Date, LocationName, Parameter) %>%
+    summarise(Value = mean(Value, na.rm = TRUE)) %>%
+    pivot_wider(names_from = "LocationName", values_from = "Value") %>%
+    ungroup()
+
+rotoiti_rotorua_wide <- rotoiti_rotorua_wide %>%
+    select(-Parameter) %>%
+    rename(Rotoiti_TP = "Lake Rotoiti at Site 4 (Integrated)", Rotorua_TP = "Lake Rotorua at Site 5 (Integrated)")
+
+wilcox.test(rotoiti_rotorua_wide$Rotoiti_TP, rotoiti_rotorua_wide$Rotorua_TP)
+```
+
+    ## 
+    ##  Wilcoxon rank sum test with continuity correction
+    ## 
+    ## data:  rotoiti_rotorua_wide$Rotoiti_TP and rotoiti_rotorua_wide$Rotorua_TP
+    ## W = 8444.5, p-value = 0.003098
+    ## alternative hypothesis: true location shift is not equal to 0
+
+``` r
+rotoiti_rotorua_wide %>%
+    pivot_longer(Rotoiti_TP:Rotorua_TP, names_to = "Site", values_to = "TP") %>%
+    ggplot(aes(x = Site, y = TP, fill = Site)) + geom_boxplot() + theme_bw() + stat_compare_means(method = "wilcox.test",
+    label = "p.format")
+```
+
+    ## Warning: Removed 3 rows containing non-finite outside the scale range
+    ## (`stat_boxplot()`).
+
+    ## Warning: Removed 3 rows containing non-finite outside the scale range
+    ## (`stat_compare_means()`).
+
+![](README_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+</details>
+
+------------------------------------------------------------------------
 
 ### ANOVA
 
