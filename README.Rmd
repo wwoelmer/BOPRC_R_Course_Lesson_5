@@ -26,6 +26,7 @@ The main packages that we will use in this tutorial are:
 - **lubridate**
 - **Hmisc**
 - **corrplot**
+- **ggpmis**
 
 Before attempting to install these packages, make sure your Primary CRAN Repository is set to:
 
@@ -43,6 +44,7 @@ library(tidyverse)
 library(lubridate)
 library(Hmisc)
 library(corrplot)
+library(ggpmisc)
 ```
 
 
@@ -123,20 +125,21 @@ the time so that it is common across the variables. We will also remove the Unit
 (and we don't need that column for this anyway since the units are stored in the Parameter names)
 
 ```{r, message=FALSE}
-okaro_corr <- wq_okaro %>% 
+okaro_wide <- wq_okaro %>% 
   mutate(Date = as.Date(Time)) %>% 
   select(-Time, -Unit) %>% 
   group_by(Date, Parameter) %>% 
   summarise(Value = mean(Value, na.rm = TRUE)) %>% 
   pivot_wider(names_from = 'Parameter', values_from = 'Value') %>% 
   ungroup()
+
 ```
 
 
 Open up your new `okaro_corr` data and check it out. Those column names have gaps and symbols in them, which might cause us problems later. Let's rename the columns using the function `rename`. I'll show you one example
 
 ```{r, message=FALSE}
-okaro_corr <- okaro_corr %>% 
+okaro_wide <- okaro_wide %>% 
   rename('chla_mgm3' = "CHLA (mg/m^3)") # the format is new name = old name
 ```
 
@@ -147,7 +150,7 @@ ___
 <summary>Click to see a solution</summary>
 
 ```{r message=FALSE,tidy=TRUE}
-okaro_corr <- okaro_corr %>% 
+okaro_wide <- okaro_wide %>% 
   rename('TN_gm3' = "TN (g/m^3)",
          "TP_gm3" = "TP (g/m^3)",
          "secchi_m" = "VC - SD (m)")
@@ -169,7 +172,7 @@ ___
 <summary>Click to see a solution</summary>
 
 ```{r message=FALSE,tidy=TRUE}
-okaro_corr <- okaro_corr %>% 
+okaro_corr <- okaro_wide %>% 
   select(-Date) 
 
 ```
@@ -208,7 +211,7 @@ corrplot(okaro_corr_out$r, type = 'upper',
 
 
 ___
-***Challenge 3:*** *Repeat the correlation analysis for Lake Tarawera. How do the correlations compare between the two lakes?*
+***Challenge 3:*** *Repeat the correlation analysis for Lake Tarawera. How do the correlations compare between the two lakes? Remember, you need to first subset the `wq` dataframe for Lake Tarawera, then `pivot_wider` so your columns are your variables, `rename` your columns to get rid of symbols and spaces, remove the Date column and any NA's, then run your correlation using `rcorr`, and then plot your output!*
 
 <details>
 <summary>Click to see a solution</summary>
@@ -218,14 +221,14 @@ wq_tara <- wq %>%
   filter(LocationName=='Lake Tarawera at Site 5 (Integrated)') %>% 
   select(Time, Value, Parameter, Unit)
 
-tara_corr <- wq_tara %>% 
+tara_wide <- wq_tara %>% 
   mutate(Date = as.Date(Time)) %>% # keeping these lines in our workflow to remove Time and Unit
   select(-Time, -Unit) %>% 
   group_by(Date, Parameter) %>% 
   summarise(Value = mean(Value, na.rm = TRUE)) %>% 
   pivot_wider(names_from = 'Parameter', values_from = 'Value')
 
-tara_corr <- tara_corr %>% 
+tara_wide <- tara_wide %>% 
   rename('chla_mgm3' = "CHLA (mg/m^3)",
          'TN_gm3' = "TN (g/m^3)",
          "TP_gm3" = "TP (g/m^3)",
@@ -233,7 +236,7 @@ tara_corr <- tara_corr %>%
  ungroup() %>% 
  select(-Date)
 
-tara_corr <- na.omit(tara_corr)
+tara_corr <- na.omit(tara_wide)
 tara_corr_out <- rcorr(as.matrix(tara_corr), type = 'spearman')
 
 p_mat <- tara_corr_out$P # this is the matrix of p_values
@@ -248,10 +251,128 @@ ___
 
 ### Linear regression
 
-Conduct linear regression between two variables that have strong, significant correlation (e.g., chl-a and secchi in Tarawera). then the challenge will be to conduct linear regression between two different variables (e.g., TN and chl-a)
+Next, we will conduct linear regression between two variables that have strong, significant correlation. Based on our correlation plots above, let's do this for chl-a and TN in Lake Okaro which have a strong, positive correlation. We will go back to our `okaro_wide` dataframe for this, which we created earlier. We will use the function `lm` to conduct linear regression.
 
-### T-test
+```{r message=FALSE,tidy=TRUE}
+
+head(okaro_wide)
+
+model <- lm(chla_mgm3 ~ TN_gm3, data = okaro_wide)
+summary(model)
+
+```
+
+The `summary(model)` shows us that both the intercept and slope (on TN) are significant and our adjusted R-squared is 0.56. That's pretty good! We can also plot this to visually show the relationship, and add the equation, R-squared and p-value onto the plot using the function `stat_poly_eq`. You can customize what information you want to show up (equation, listed as `..eq.label..`, r-squared, listed as `..rr.label..`, etc.)
+
+```{r message=FALSE,tidy=TRUE}
+
+ggplot(okaro_wide, aes(x = TN_gm3, y = chla_mgm3)) +
+  geom_point() +
+  geom_smooth(method = 'lm', se = TRUE) +
+  theme_bw() +
+   stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., ..p.value.label.., sep = "~~~"))) +
+  theme_bw() +
+  ylab(expression(Chl*"-a"~(mg/m^3)))
+
+```
+Ok, we have a nice plot with our linear regression summary statistics! It's always good to plot some diagnostics of statistical models. Let's look at our residuals. Remember for a linear regression, our residuals should be normally distributed. We will use the function `shapir.test` which tests for normality. If the p-value of the Shapiro-Wilk is less than 0.05, that indicates that the variable is *not* normally distributed.
+
+```{r message=FALSE,tidy=TRUE}
+
+resid <- resid(model)
+hist(resid)
+
+shapiro.test(resid)
+
+
+```
+
+Hmmm, the Shapiro-Wilk test returns a p-value of < 0.05, which means our residuals are not normally distributed and we have violated the assumptions of the linear regression--not good! We can address this by transforming our data to try and achieve a normal distribution of the residuals. Typically, you can try by first transforming the response variable, in our case chl-a.
+
+```{r message=FALSE,tidy=TRUE}
+
+model <- lm(log(chla_mgm3) ~ TN_gm3, data = okaro_wide)
+summary(model)
+
+resid <- resid(model)
+hist(resid)
+
+shapiro.test(resid)
+
+
+```
+
+Nice, that looks much better--our p-value is 0.78 after log-transforming chl-a, which indicates that the residuals are normally distributed and the assumptions of a linear regression have been met. Let's also update our plot with the new model and log transform the y-axis
+
+```{r message=FALSE,tidy=TRUE}
+
+ggplot(okaro_wide, aes(x = TN_gm3, y = log(chla_mgm3))) +
+  geom_point() +
+  geom_smooth(method = 'lm', se = TRUE) +
+  theme_bw() +
+   stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., ..p.value.label.., sep = "~~~"))) +
+  theme_bw() +
+  ylab(expression(Log~Chl*"-a"~(mg/m^3)))
+
+
+```
+
+
+___
+***Challenge 4:*** *Repeat the linear regression analysis between chl-a and secchi depth. Make a similar plot with `geom_smooth` and add the equation, R2, and p-value to the plot. Test to see if the residuals are normally distributed and re-adjust your plot accordingly.*
+
+<details>
+<summary>Click to see a solution</summary>
+
+```{r message=FALSE,tidy=TRUE}
+head(okaro_wide)
+
+model2 <- lm(log(chla_mgm3) ~ secchi_m, data = okaro_wide)
+summary(model2)
+
+resid2 <- resid(model2)
+hist(resid2)
+
+shapiro.test(resid2)
+
+ggplot(okaro_wide, aes(x = secchi_m, y = log(chla_mgm3))) +
+  geom_point() +
+  geom_smooth(method = 'lm', se = TRUE) +
+  theme_bw() +
+   stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label.., ..p.value.label.., sep = "~~~"))) +
+  theme_bw() +
+  xlab('Secchi depth (m)') +
+  ylab(expression(Log~Chl*"-a"~(mg/m^3)))
+
+```
+</details>
+
+___
+
+
+### Testing for statistical differences between two variables: t-tests (parametric) and Wilcoxon rank-sum (non-parametric)
+
+First, we need to check if chl-a and TN are normally distributed, which is a requirement for regression
+
 Could test the difference in chl-a between Rotorua and Rotoiti? Introduce transformations to meet normality assumptions. (introduce shapiro.test() to check normality?) Is this useful?
+```{r message=FALSE,tidy=TRUE}
+
+head(okaro_wide)
+
+shapiro.test(okaro_wide$chla_mgm3)
+shapiro.test(okaro_wide$TN_gm3)
+
+
+```
+The p-value for chl-a and TN is < 0.05, which indicates that they are *not* normally distributed. In order to run a linear regression, we will need to log-transform these variables. We will run the shapiro.test again on the log-transformed chl-a.
+
+```{r message=FALSE,tidy=TRUE}
+
+
+
+
+```
+The p-value is now 0.
 
 ### Wilcoxon rank sum
 This test is a non-parametric alternative to a t-test and, as such, is for non-normally distributed variables. Run wilcoxon test to compare if secchi depth is different between Tarawera and Okaro (two different trophic states)
