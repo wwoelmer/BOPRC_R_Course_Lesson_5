@@ -5,14 +5,13 @@ BOPRC R Tutorial 5 - Statistical analyses in R
 
 This lesson is designed to provide you with experience in running
 statistical analyses in R. We will use water quality data as an example,
-but these analyses can be applied to any other datasets, provided the
+but these analyses can be applied to many other datasets, provided the
 statistical assumptions are met. We will cover the following topics:
 
 - **Correlation analyses (Pearson and Spearman) and plots**
 - **Linear regression and plots**
 - **T-tests and Wilcoxon rank sum test (aka Mann-Whitney)**
 - **ANOVA**
-- **Trend analysis**
 
 |  |
 |----|
@@ -79,9 +78,9 @@ wq <- read.csv('./data/Lake_WQ_Timeseries.csv')
 Now, look at the `wq` dataframe by clicking on it in the environment and
 familiarise yourself with the columns. You can also run the function
 `colnames(wq)` in the console to get a list of column names. It’s better
-to run this in the console, since it is a diagnostic test and not
-something you will necessary need to run every time you open your
-script–just as needed.
+to run this in the console (rather than in your script editor), since it
+is a diagnostic test and not something you will necessary need to run
+every time you open your script–just as needed.
 
 ``` r
 colnames(wq) # you don't have to save this in your script, but can copy it into the console
@@ -178,7 +177,7 @@ wq_okaro <- wq %>%
 ```
 
 Let’s also clean up the dataframe and only select the columns which are
-useful
+useful to us right now
 
 ``` r
 wq_okaro <- wq_okaro %>% 
@@ -212,12 +211,13 @@ we can do to analyse this data. Let’s start with a correlation analysis.
 
 ### Correlation analysis and plots
 
-In order to conduct a correlation analysis, we need to do some
-formatting/rearranging. First, we need to make the data wide, but we
-also have to create a `Date` column which doesn’t include the time so
-that it is common across the variables. We will also remove the `Unit`
-column for this reason (and we don’t need that column for this anyway
-since the units are stored in the Parameter names)
+We will use the function `rcorr` and `corrplot` to create and visualize
+our correlation analysis. In order to conduct a correlation analysis, we
+need to do some formatting/rearranging. First, we need to make the data
+wide, but we also have to create a `Date` column which doesn’t include
+the time so that it is common across the variables. We will also remove
+the `Unit` column for this reason (and we don’t need that column for
+this anyway since the units are stored in the Parameter names)
 
 ``` r
 okaro_wide <- wq_okaro %>% 
@@ -285,9 +285,9 @@ okaro_corr <- okaro_wide %>%
 
 ------------------------------------------------------------------------
 
-Now, we have to make sure there are no NA’s in the data frame, and
-format it as a matrix. This is simply because the function which runs
-the correlation analysis is picky, so we have to make it happy :)
+Now we have to make sure there are no NA’s in the data frame, and format
+it as a matrix. This is simply because the function which runs the
+correlation analysis, `rcorr`, is picky, so we have to make it happy :)
 
 ``` r
 okaro_corr <- na.omit(okaro_corr)
@@ -338,7 +338,8 @@ How do the correlations compare between the two lakes? Remember, you
 need to first subset the `wq` dataframe for Lake Tarawera, then
 `pivot_wider` so your columns are your variables, `rename` your columns
 to get rid of symbols and spaces, remove the `Date` column and any NA’s,
-then run your correlation using `rcorr`, and then plot your output!*
+then run your correlation using `rcorr`, and then plot your output using
+`corrplot`!*
 
 <details>
 <summary>
@@ -655,14 +656,15 @@ difference between two sets of data. We often need to do this in ecology
 and environmental science for a number of reasons. For example, is the
 community composition at one site different from another?
 
-In our case, we will test to see if the values of a given water quality
-variable is different between lakes or sites. Let’s test to see if the
-data collected at Okawa Bay in the shallower western bay of lake
-Rotoiti, is significantly different from data collected at Site 4 in
-Lake Rotoiti, in the much deeper eastern bay of the lake. This will tell
-us something about how spatially heterogeneous Lake Rotoiti is. Let’s
-focus on chl-a dynamics, as this relates to algal blooms and is of
-societal importance.
+In our case, we will test to see if the distribution of a given water
+quality variable is different between lakes or sites.
+
+Let’s test to see if the data collected at Okawa Bay in the shallower
+western bay of lake Rotoiti, is significantly different from data
+collected at Site 4 in Lake Rotoiti, in the much deeper eastern bay of
+the lake. This will tell us something about how spatially heterogeneous
+Lake Rotoiti is. Let’s focus on chl-a dynamics, as this relates to algal
+blooms and is of direct societal relevance.
 
 First, we need to do a little data manipulating to get the data for our
 two sites in the right format. We will go back to our original `wq`
@@ -693,8 +695,9 @@ head(wq_rotoiti)
 
 ------------------------------------------------------------------------
 
-***Challenge 5:*** *We also need to select just the chl-a data. Filter
-the new dataset `wq_rotoiti` so that the only Parameter is chla*
+***Challenge 5:*** *From the `Parameter` column, we need to select just
+the chl-a data. Filter the new dataset `wq_rotoiti` so that the only
+Parameter is chla.*
 
 <details>
 <summary>
@@ -801,7 +804,7 @@ Both sites have a very small p-value, which means they fail the
 Shapiro-Wilks normality test so, if we want to use a t-test we will need
 to transform them. Log-transformation is one common way to do this, like
 we did above with chl-a data at Lake Okaro. We will also look at a
-histogram to visually examine normality.
+histogram of the logged values to visually examine normality.
 
 ``` r
 shapiro.test(log(rotoiti_wide$OkawaBay_chla))
@@ -839,7 +842,8 @@ Great, things are looking pretty “normal” after log-transformation, so
 we are good to go ahead and run a t-test. Let’s also create a boxplot
 which will show the distributions of data at each site. We will need to
 `pivot_longer` again to show the boxplots with the sites on the x-axis,
-so we will do this in the tidyverse pipe style.
+so we will do this in the tidyverse pipe style, without creating a new
+object.
 
 ``` r
 t.test(log(rotoiti_wide$OkawaBay_chla), log(rotoiti_wide$Site4_chla), paired = TRUE)
@@ -1085,8 +1089,8 @@ shapiro.test(secchi_okaro$log_secchi_m)
     ## data:  secchi_okaro$log_secchi_m
     ## W = 0.97802, p-value = 0.09311
 
-P-value is greater than 0.05, so all looks good. We will run our ANOVA
-on log_secchi_m.
+P-value is greater than 0.05, so that looks better. We will run our
+ANOVA on log_secchi_m.
 
 Next, we need to create out `seasons` column, which is the variable by
 which we want to test if there are differences in Secchi depth. We first
@@ -1104,7 +1108,8 @@ secchi_okaro <- secchi_okaro %>%
 ***Challenge 8:*** *Now, finish creating the `season` column using
 `case_when` for “Autumn”, “Winter” and “Spring”. You will need to add
 `TRUE ~ season` as the last argument so that the values we set for
-Summer in the previous chunk of code remain.*
+Summer in the previous chunk of code remain (i.e., you’re not writing
+over your `summer` values you just did).*
 
 <details>
 <summary>
@@ -1155,8 +1160,6 @@ summary(anova_secchi_okaro)
 The Pr(\>F) is very small, which tells us that there is a significant
 differences between seasons for Secchi depth.
 
-*Could add a challenge to do ANOVA on another lake?*
-
-### Trend analysis
-
-Insert James’ stuff!
+*Nice job! You’ve made it to the end of this statistical lesson. If you
+still have time, you can try running an ANOVA across seasons in another
+lake. Come to us with any questions!*
