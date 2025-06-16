@@ -122,6 +122,8 @@ Alright, we have a time series of four variables. There are many things we can d
 
 ### Correlation analysis and plots
 
+A correlation analysis is used to assess the magnitude and direction of the relationship between two variables. It does not necessarily imply casuation, but shows you how two variables change together. 
+
 We will use the function `rcorr` and `corrplot` to create and visualize our correlation analysis. In order to conduct a correlation analysis, we need to do some formatting/rearranging. First, we need to make the data wide, but we also have to create a `Date` column which doesn't include
 the time so that it is common across the variables. We will also remove the `Unit` column for this reason
 (and we don't need that column for this anyway since the units are stored in the Parameter names)
@@ -182,10 +184,11 @@ okaro_corr <- okaro_wide %>%
 
 ___
 
-Now we have to make sure there are no NA's in the data frame, and format it as a matrix. This is simply because the function which runs the correlation analysis, `rcorr`, is picky, so we have to make it happy :)
+Now we have to make sure there are no NA's in the data frame, and format it as a matrix. This is simply because the function which runs the correlation analysis, `rcorr`, is picky, so we have to make it happy :) `rcorr` requires the format of the input to be a matrix, which is a two-dimensional data structure that organizes elements into rows and columns. This is slightly different from a dataframe, which is what we usually use, in that each element in a matrix must be of the same data type, making it a homogenous structure.
 
 ```{r message=FALSE,tidy=TRUE}
 okaro_corr <- na.omit(okaro_corr)
+# note that the function complete.cases() also will do the same trick here
 okaro_corr <- as.matrix(okaro_corr)
 
 ```
@@ -205,11 +208,36 @@ Let's look at that output! The first table is the correlation coefficients (r) a
 p_mat <- okaro_corr_out$P # this is the matrix of p_values
 diag(p_mat) <- 1 # because there are no p-values on the diagonals, we have to insert 1 here for the plot to work
 corrplot(okaro_corr_out$r, type = 'upper',
-         sig.level = 0.05, 
+         sig.level = 0.05,
+         diag = FALSE,
          insig = 'blank', p.mat = p_mat)
 
 
 ```
+
+
+There are lots of ways to cusotmize these plots. You can check them out by googling `corrplot` and seeing what others have done and running `?corrplot` in the console to see what some of the different arguments do. Let's say we want to actually see what the correlation coefficients are on the plot.
+
+___
+***Challenge 4:*** *Remake the plot but add the argument `addCoef.col = "black"` to display the p-values within each circle.*
+
+<details>
+<summary>Click to see a solution</summary>
+
+```{r message=FALSE}
+corrplot(okaro_corr_out$r, 
+         type = 'upper',
+         sig.level = 0.05, 
+         addCoef.col = "black",
+         diag = FALSE,
+         insig = 'blank', 
+         p.mat = p_mat)
+
+```
+</details>
+
+___
+
 
 
 ___
@@ -243,19 +271,28 @@ tara_corr_out <- rcorr(as.matrix(tara_corr), type = 'spearman')
 
 p_mat <- tara_corr_out$P # this is the matrix of p_values
 diag(p_mat) <- 1 # because there are no p-values on the diagonals, we have to insert 1 here for the plot to 
-corrplot(tara_corr_out$r, type = 'upper',
-                       sig.level = 0.05, insig = 'blank', p.mat = p_mat)
+corrplot(tara_corr_out$r, 
+         type = 'upper',
+         diag = FALSE,
+         sig.level = 0.05, 
+         insig = 'blank', 
+         addCoef.col = 'black',
+         p.mat = p_mat)
 
 ```
 </details>
 
 ___
 
+Between Lakes Okaro and Tarawera, we can now see that there are differences in both the strength of correlations, and in what correlations are significant. For example, in Lake Okaro, all the variables show significant correlations, with the strongest relationship between Secchi depth and chl-a (-0.75). In contrast, in Lake Tarawera, only chl-a and TN; TN and secchi; and chl-a and TN are significantly related, and the relationships are much weaker. There are lots of reasons we can dig into here, but a big driver of these different relationships is likely tied to differences in size, trophic state, and catchment characteristics!
+
 ### Linear regression
 
 Next, we will conduct linear regression between two variables which we think are causally related. 
 
-Based on our correlation plots above, let's do this for chl-a and TN in Lake Okaro which have a strong, positive correlation. We will go back to our `okaro_wide` dataframe for this, which we created earlier. We will use the function `lm()` to conduct linear regression. Then, we use `summary()` to shows us the results of the model. We will also plot this to visually show the relationship, and add the equation, R-squared and p-value onto the plot using the function `stat_poly_eq`. You can customize what information you want to show up (equation, listed as `..eq.label..`, r-squared, listed as `..rr.label..`, etc.)
+Based on our correlation plots above, let's do this for chl-a and TN in Lake Okaro which have a strong, positive correlation. We will go back to our `okaro_wide` dataframe for this, which we created earlier. We will use the function `lm()` to conduct linear regression. Then, we use `summary()` to shows us the results of the model. We can also run `plot(model)` to show the residuals of the model and help check out some diagnostics of the model fit.
+
+To plot the linear regression output, we will create a plot with TN on the x-axis and chl-a on the y-axis using `geom_point` like we ususally do. however, we will also use the function `geom_smooth(method = 'lm')` which adds a 'smoothed' line corresponding to a linear model (that is what the abbrevation 'lm' means). We will pair this with the function `stat_poly_eq` which allows you to also add the statistical output to the plot. You can customize what information you want to show up (equation, listed as `..eq.label..`, r-squared, listed as `..rr.label..`, etc.)
 
 
 ```{r message=FALSE,tidy=TRUE}
@@ -264,6 +301,8 @@ head(okaro_wide)
 
 model <- lm(chla_mgm3 ~ TN_gm3, data = okaro_wide)
 summary(model)
+plot(model)
+
 
 ggplot(okaro_wide, aes(x = TN_gm3, y = chla_mgm3)) +
   geom_point() +
@@ -296,6 +335,7 @@ Uh oh, the Shapiro-Wilk test returns a p-value of < 0.05, which means our residu
 
 model <- lm(log(chla_mgm3) ~ TN_gm3, data = okaro_wide)
 summary(model)
+plot(model)
 
 resid <- resid(model)
 hist(resid)
@@ -332,6 +372,7 @@ head(okaro_wide)
 
 model2 <- lm(log(chla_mgm3) ~ secchi_m, data = okaro_wide)
 summary(model2)
+plot(model2)
 
 resid2 <- resid(model2)
 hist(resid2)
@@ -448,7 +489,15 @@ hist(log(rotoiti_wide$Site4_chla))
 
 ```
 
-Great, things are looking pretty "normal" after log-transformation, so we are good to go ahead and run a t-test. Let's also create a boxplot which will show the distributions of data at each site. We will need to `pivot_longer` again to show the boxplots with the sites on the x-axis, so we will do this in the tidyverse pipe style, without creating a new object.
+Great, things are looking pretty "normal" after log-transformation, so we are good to go ahead and run a t-test. 
+
+
+
+***NOTE*** *: there is a package called `bestNormalize` which runs a series of noramlisation tests and allows you to pick the best transformation for your data. This can be a useful tool for figuring out which type of normalization to use (log, sqaure root, etc.), especially if your data do not easily normalize with a log transformation. However, we will not go into details on how to use this package today as a log transformation works well in our case, just want you to be aware of it for future use!*
+
+
+
+Let's also create a boxplot which will show the distributions of data at each site. We will need to `pivot_longer` again to show the boxplots with the sites on the x-axis, so we will do this in the tidyverse pipe style, without creating a new object.
 
 ```{r message=FALSE,tidy=TRUE}
 
@@ -464,13 +513,13 @@ rotoiti_wide %>%
 
 ```
 
-The results of our t-test show that these two sites are significantly different from each other. Visually inspecting the boxplots also supports this. Cool!
+The results of our t-test show that these two sites are significantly different from each other. This isn't too surprising given that Okawa Bay is a much shallower, isolated bay on the western end of Lake Rotoiti, while Site 4 is located in the much deeper main basin. Visually inspecting the boxplots also supports this. Cool!
 
 
 ## Wilcoxon rank sum
 Now, let's say we didn't want to log-transform our data. We can use non-parametric statistical tests to look for differences between non-normally distributed datasets. We will use the Wilcoxon rank sum test for this (sometimes called the Mann-Whitney test).
 
-Let's run the test using the `wilcoxon.test` function, and also create our boxplot figure.
+Let's run the test using the `wilcoxon.test` function, and also create our boxplot figure. We will use the argument `paired = TRUE` in our Wilcoxon test because these samples were taken at roughly the same time and are expected to be representative of similar conditions at both sites. 
 
 ```{r message=FALSE,tidy=TRUE}
 
@@ -634,5 +683,22 @@ summary(anova_secchi_okaro)
 
 
 The Pr(>F) is very small, which tells us that there is a significant differences between seasons for Secchi depth.
+
+One last thing we can check is which seasons are different from each other. We can run a `Tukey` test to see this.
+
+```{r message=FALSE,tidy=TRUE}
+
+tukey_result <- TukeyHSD(anova_secchi_okaro, conf.level = 0.95)
+print(tukey_result)
+
+ggplot(secchi_okaro, aes(x= season, y = log(secchi_m))) +
+  geom_boxplot() +
+  theme_bw() +
+  ylab('Secchi depth (m)')
+
+```
+
+Looking at the p-adj column, we can see which seasons have statistically significant differences. Let's use a p-value cutoff of p < 0.05 is considered significant. Here, we can see that winter-spring, autumn-summer, and winter-summer are not statistically different from each other. If we look back at our boxplots, this looks like a reasonable result given the differences between distributions of those seasons.
+
 
 *Nice job! You've made it to the end of this statistical lesson. If you still have time, you can try running an ANOVA across seasons in another lake. Come to us with any questions!*

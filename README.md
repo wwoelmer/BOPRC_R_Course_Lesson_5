@@ -211,6 +211,10 @@ we can do to analyse this data. Let’s start with a correlation analysis.
 
 ### Correlation analysis and plots
 
+A correlation analysis is used to assess the magnitude and direction of
+the relationship between two variables. It does not necessarily imply
+casuation, but shows you how two variables change together.
+
 We will use the function `rcorr` and `corrplot` to create and visualize
 our correlation analysis. In order to conduct a correlation analysis, we
 need to do some formatting/rearranging. First, we need to make the data
@@ -288,9 +292,15 @@ okaro_corr <- okaro_wide %>%
 Now we have to make sure there are no NA’s in the data frame, and format
 it as a matrix. This is simply because the function which runs the
 correlation analysis, `rcorr`, is picky, so we have to make it happy :)
+`rcorr` requires the format of the input to be a matrix, which is a
+two-dimensional data structure that organizes elements into rows and
+columns. This is slightly different from a dataframe, which is what we
+usually use, in that each element in a matrix must be of the same data
+type, making it a homogenous structure.
 
 ``` r
 okaro_corr <- na.omit(okaro_corr)
+# note that the function complete.cases() also will do the same trick here
 okaro_corr <- as.matrix(okaro_corr)
 ```
 
@@ -326,10 +336,42 @@ coefficients (r) and the second is the p-values.
 ``` r
 p_mat <- okaro_corr_out$P  # this is the matrix of p_values
 diag(p_mat) <- 1  # because there are no p-values on the diagonals, we have to insert 1 here for the plot to work
-corrplot(okaro_corr_out$r, type = "upper", sig.level = 0.05, insig = "blank", p.mat = p_mat)
+corrplot(okaro_corr_out$r, type = "upper", sig.level = 0.05, diag = FALSE, insig = "blank",
+    p.mat = p_mat)
 ```
 
 ![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-15-1.png)<!-- -->
+
+There are lots of ways to cusotmize these plots. You can check them out
+by googling `corrplot` and seeing what others have done and running
+`?corrplot` in the console to see what some of the different arguments
+do. Let’s say we want to actually see what the correlation coefficients
+are on the plot.
+
+------------------------------------------------------------------------
+
+***Challenge 4:*** *Remake the plot but add the argument
+`addCoef.col = "black"` to display the p-values within each circle.*
+
+<details>
+<summary>
+Click to see a solution
+</summary>
+
+``` r
+corrplot(okaro_corr_out$r, 
+         type = 'upper',
+         sig.level = 0.05, 
+         addCoef.col = "black",
+         diag = FALSE,
+         insig = 'blank', 
+         p.mat = p_mat)
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+</details>
+
+------------------------------------------------------------------------
 
 ------------------------------------------------------------------------
 
@@ -371,14 +413,30 @@ tara_corr_out <- rcorr(as.matrix(tara_corr), type = 'spearman')
 
 p_mat <- tara_corr_out$P # this is the matrix of p_values
 diag(p_mat) <- 1 # because there are no p-values on the diagonals, we have to insert 1 here for the plot to 
-corrplot(tara_corr_out$r, type = 'upper',
-                       sig.level = 0.05, insig = 'blank', p.mat = p_mat)
+corrplot(tara_corr_out$r, 
+         type = 'upper',
+         diag = FALSE,
+         sig.level = 0.05, 
+         insig = 'blank', 
+         addCoef.col = 'black',
+         p.mat = p_mat)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
 </details>
 
 ------------------------------------------------------------------------
+
+Between Lakes Okaro and Tarawera, we can now see that there are
+differences in both the strength of correlations, and in what
+correlations are significant. For example, in Lake Okaro, all the
+variables show significant correlations, with the strongest relationship
+between Secchi depth and chl-a (-0.75). In contrast, in Lake Tarawera,
+only chl-a and TN; TN and secchi; and chl-a and TN are significantly
+related, and the relationships are much weaker. There are lots of
+reasons we can dig into here, but a big driver of these different
+relationships is likely tied to differences in size, trophic state, and
+catchment characteristics!
 
 ### Linear regression
 
@@ -389,11 +447,19 @@ Based on our correlation plots above, let’s do this for chl-a and TN in
 Lake Okaro which have a strong, positive correlation. We will go back to
 our `okaro_wide` dataframe for this, which we created earlier. We will
 use the function `lm()` to conduct linear regression. Then, we use
-`summary()` to shows us the results of the model. We will also plot this
-to visually show the relationship, and add the equation, R-squared and
-p-value onto the plot using the function `stat_poly_eq`. You can
-customize what information you want to show up (equation, listed as
-`..eq.label..`, r-squared, listed as `..rr.label..`, etc.)
+`summary()` to shows us the results of the model. We can also run
+`plot(model)` to show the residuals of the model and help check out some
+diagnostics of the model fit.
+
+To plot the linear regression output, we will create a plot with TN on
+the x-axis and chl-a on the y-axis using `geom_point` like we ususally
+do. however, we will also use the function `geom_smooth(method = 'lm')`
+which adds a ‘smoothed’ line corresponding to a linear model (that is
+what the abbrevation ‘lm’ means). We will pair this with the function
+`stat_poly_eq` which allows you to also add the statistical output to
+the plot. You can customize what information you want to show up
+(equation, listed as `..eq.label..`, r-squared, listed as
+`..rr.label..`, etc.)
 
 ``` r
 head(okaro_wide)
@@ -435,6 +501,12 @@ summary(model)
     ## F-statistic: 119.8 on 1 and 94 DF,  p-value: < 2.2e-16
 
 ``` r
+plot(model)
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-18-3.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-18-4.png)<!-- -->
+
+``` r
 ggplot(okaro_wide, aes(x = TN_gm3, y = chla_mgm3)) + geom_point() + geom_smooth(method = "lm",
     se = TRUE) + theme_bw() + stat_poly_eq(aes(label = paste(..eq.label.., ..rr.label..,
     ..p.value.label.., sep = "~~~"))) + theme_bw() + ylab(expression(Chl * "-a" ~
@@ -456,7 +528,7 @@ ggplot(okaro_wide, aes(x = TN_gm3, y = chla_mgm3)) + geom_point() + geom_smooth(
     ## Warning: Removed 39 rows containing missing values or values outside the scale range
     ## (`geom_point()`).
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-18-5.png)<!-- -->
 
 Well, that was easy! We have our summary statistics and a nice plot with
 our linear regression. The `summary(model)` shows that both the
@@ -475,7 +547,7 @@ resid <- resid(model)
 hist(resid)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
 
 ``` r
 shapiro.test(resid)
@@ -520,11 +592,17 @@ summary(model)
     ## F-statistic: 79.19 on 1 and 94 DF,  p-value: 4.028e-14
 
 ``` r
+plot(model)
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-20-2.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-20-3.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-20-4.png)<!-- -->
+
+``` r
 resid <- resid(model)
 hist(resid)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-19-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-20-5.png)<!-- -->
 
 ``` r
 shapiro.test(resid)
@@ -557,7 +635,7 @@ ggplot(okaro_wide, aes(x = TN_gm3, y = log(chla_mgm3))) + geom_point() + geom_sm
     ## Warning: Removed 39 rows containing missing values or values outside the scale range
     ## (`geom_point()`).
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-20-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
 
 ------------------------------------------------------------------------
 
@@ -612,11 +690,17 @@ summary(model2)
     ## F-statistic: 84.86 on 1 and 93 DF,  p-value: 9.498e-15
 
 ``` r
+plot(model2)
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-22-1.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-22-2.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-22-3.png)<!-- -->![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-22-4.png)<!-- -->
+
+``` r
 resid2 <- resid(model2)
 hist(resid2)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-21-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-22-5.png)<!-- -->
 
 ``` r
 shapiro.test(resid2)
@@ -644,7 +728,7 @@ ggplot(okaro_wide, aes(x = secchi_m, y = log(chla_mgm3))) + geom_point() + geom_
     ## Warning: Removed 40 rows containing missing values or values outside the scale range
     ## (`geom_point()`).
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-21-2.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-22-6.png)<!-- -->
 </details>
 
 ------------------------------------------------------------------------
@@ -830,20 +914,30 @@ shapiro.test(log(rotoiti_wide$Site4_chla))
 hist(log(rotoiti_wide$OkawaBay_chla))
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-27-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
 
 ``` r
 hist(log(rotoiti_wide$Site4_chla))
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-27-2.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-28-2.png)<!-- -->
 
 Great, things are looking pretty “normal” after log-transformation, so
-we are good to go ahead and run a t-test. Let’s also create a boxplot
-which will show the distributions of data at each site. We will need to
-`pivot_longer` again to show the boxplots with the sites on the x-axis,
-so we will do this in the tidyverse pipe style, without creating a new
-object.
+we are good to go ahead and run a t-test.
+
+***NOTE*** *: there is a package called `bestNormalize` which runs a
+series of noramlisation tests and allows you to pick the best
+transformation for your data. This can be a useful tool for figuring out
+which type of normalization to use (log, sqaure root, etc.), especially
+if your data do not easily normalize with a log transformation. However,
+we will not go into details on how to use this package today as a log
+transformation works well in our case, just want you to be aware of it
+for future use!*
+
+Let’s also create a boxplot which will show the distributions of data at
+each site. We will need to `pivot_longer` again to show the boxplots
+with the sites on the x-axis, so we will do this in the tidyverse pipe
+style, without creating a new object.
 
 ``` r
 t.test(log(rotoiti_wide$OkawaBay_chla), log(rotoiti_wide$Site4_chla), paired = TRUE)
@@ -874,11 +968,13 @@ rotoiti_wide %>%
     ## Warning: Removed 92 rows containing non-finite outside the scale range
     ## (`stat_compare_means()`).
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-28-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
 
 The results of our t-test show that these two sites are significantly
-different from each other. Visually inspecting the boxplots also
-supports this. Cool!
+different from each other. This isn’t too surprising given that Okawa
+Bay is a much shallower, isolated bay on the western end of Lake
+Rotoiti, while Site 4 is located in the much deeper main basin. Visually
+inspecting the boxplots also supports this. Cool!
 
 ## Wilcoxon rank sum
 
@@ -888,7 +984,10 @@ non-normally distributed datasets. We will use the Wilcoxon rank sum
 test for this (sometimes called the Mann-Whitney test).
 
 Let’s run the test using the `wilcoxon.test` function, and also create
-our boxplot figure.
+our boxplot figure. We will use the argument `paired = TRUE` in our
+Wilcoxon test because these samples were taken at roughly the same time
+and are expected to be representative of similar conditions at both
+sites.
 
 ``` r
 wilcox.test(rotoiti_wide$OkawaBay_chla, rotoiti_wide$Site4_chla, paired = TRUE)
@@ -914,7 +1013,7 @@ rotoiti_wide %>%
     ## Warning: Removed 92 rows containing non-finite outside the scale range
     ## (`stat_compare_means()`).
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-29-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
 
 With the Wilcoxon rank sum test on our raw data, we also show that there
 is a statistical difference between these two sites. Pretty cool to see
@@ -988,7 +1087,7 @@ rotoiti_rotorua_wide %>%
     ## Warning: Removed 3 rows containing non-finite outside the scale range
     ## (`stat_compare_means()`).
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-30-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
 
 ``` r
 ## if running a wilcoxon test
@@ -1014,7 +1113,7 @@ rotoiti_rotorua_wide %>%
     ## Removed 3 rows containing non-finite outside the scale range
     ## (`stat_compare_means()`).
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-30-2.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-31-2.png)<!-- -->
 </details>
 
 ------------------------------------------------------------------------
@@ -1055,7 +1154,7 @@ secchi_okaro <- wq_okaro %>%
 hist(secchi_okaro$secchi_m)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-31-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
 
 ``` r
 shapiro.test(secchi_okaro$secchi_m)
@@ -1077,7 +1176,7 @@ secchi_okaro <- secchi_okaro %>%
 hist(secchi_okaro$log_secchi_m)
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-32-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-33-1.png)<!-- -->
 
 ``` r
 shapiro.test(secchi_okaro$log_secchi_m)
@@ -1139,7 +1238,7 @@ ggplot(secchi_okaro, aes(x = season, y = secchi_m)) + geom_boxplot() + theme_bw(
     ylab("Secchi depth (m)")
 ```
 
-![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-35-1.png)<!-- -->
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-36-1.png)<!-- -->
 
 Ok, there are some clear differences between the seasons here. I have a
 feeling this ANOVA is gonna be interesting…We will use the function
@@ -1159,6 +1258,43 @@ summary(anova_secchi_okaro)
 
 The Pr(\>F) is very small, which tells us that there is a significant
 differences between seasons for Secchi depth.
+
+One last thing we can check is which seasons are different from each
+other. We can run a `Tukey` test to see this.
+
+``` r
+tukey_result <- TukeyHSD(anova_secchi_okaro, conf.level = 0.95)
+print(tukey_result)
+```
+
+    ##   Tukey multiple comparisons of means
+    ##     95% family-wise confidence level
+    ## 
+    ## Fit: aov(formula = log_secchi_m ~ season, data = secchi_okaro)
+    ## 
+    ## $season
+    ##                     diff          lwr         upr     p adj
+    ## Summer-Spring  0.4014153  0.063513659  0.73931693 0.0130941
+    ## Autumn-Spring  0.7483003  0.410398707  1.08620198 0.0000005
+    ## Winter-Spring  0.3485858 -0.002656331  0.69982791 0.0525363
+    ## Autumn-Summer  0.3468850 -0.011875594  0.70564569 0.0619260
+    ## Winter-Summer -0.0528295 -0.424182046  0.31852304 0.9823365
+    ## Winter-Autumn -0.3997145 -0.771067094 -0.02836201 0.0297440
+
+``` r
+ggplot(secchi_okaro, aes(x = season, y = log(secchi_m))) + geom_boxplot() + theme_bw() +
+    ylab("Secchi depth (m)")
+```
+
+![](R_Tutorial_5_2025_files/figure-gfm/unnamed-chunk-38-1.png)<!-- -->
+
+Looking at the p-adj column, we can see which seasons have statistically
+significant differences. Let’s use a p-value cutoff of p \< 0.05 is
+considered significant. Here, we can see that winter-spring,
+autumn-summer, and winter-summer are not statistically different from
+each other. If we look back at our boxplots, this looks like a
+reasonable result given the differences between distributions of those
+seasons.
 
 *Nice job! You’ve made it to the end of this statistical lesson. If you
 still have time, you can try running an ANOVA across seasons in another
